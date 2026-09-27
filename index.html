@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0e17">
+<title>Binance Pump Radar</title>
+<style>
+:root {
+  --bg: #0b0e17;
+  --bg2: #121826;
+  --bg3: #1a2235;
+  --border: #2a3548;
+  --text: #e8edf5;
+  --muted: #8b9bb4;
+  --green: #00c853;
+  --red: #ff5252;
+  --orange: #ff9100;
+  --blue: #2979ff;
+  --purple: #7c4dff;
+  --gold: #ffd600;
+  --strong: #ff1744;
+  --early: #00e676;
+  --neutral: #78909c;
+  --radius: 10px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--blue); text-decoration: none; }
+/* Header */
+.header {
+  background: linear-gradient(180deg, #0f1525 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.logo span { color: var(--gold); }
+.logo-badge {
+  background: linear-gradient(135deg, #ff6d00, #ff1744);
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.stat-value { font-size: 1rem; font-weight: 600; font-family: var(--mono); }
+.stat-value.live { color: var(--green); }
+.stat-value.reconnecting { color: var(--orange); }
+.stat-value.error { color: var(--red); }
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px 10px 36px;
+  color: var(--text);
+  font-size: 16px; /* prevents iOS zoom on focus */
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.search-wrap input:focus { border-color: var(--blue); }
+.search-wrap::before {
+  content: '⌕';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+.filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+}
+.filter-btn:hover { border-color: var(--blue); color: var(--text); }
+.filter-btn.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+/* Main layout */
+.main {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(255,109,0,0.08), transparent);
+}
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.disclaimer {
+  font-size: 0.7rem;
+  color: var(--muted);
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+/* Tables */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--bg3);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(42,53,72,0.5);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(41,121,255,0.06); }
+.rank {
+  font-weight: 700;
+  color: var(--muted);
+  width: 36px;
+}
+.rank-1 { color: var(--gold); }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
+.coin {
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.score {
+  font-weight: 700;
+  min-width: 52px;
+}
+.score-strong { color: var(--strong); }
+.score-early { color: var(--early); }
+.score-neutral { color: var(--neutral); }
+.price { font-weight: 600; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.vol { color: var(--muted); font-size: 0.8rem; }
+.signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font);
+}
+.signal-strong { background: rgba(255,23,68,0.15); color: var(--strong); }
+.signal-early { background: rgba(0,230,118,0.12); color: var(--early); }
+.signal-neutral { background: rgba(120,144,156,0.15); color: var(--neutral); }
+.spike {
+  font-weight: 600;
+}
+/* Loading / Error states */
+.state-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  gap: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-box {
+  background: rgba(255,82,82,0.1);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 16px 20px;
+  color: var(--red);
+  max-width: 420px;
+  text-align: center;
+}
+.error-box button {
+  margin-top: 12px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px 16px 32px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.footer a { color: var(--muted); text-decoration: underline; }
+/* Responsive – mobile first improvements */
+@media (max-width: 768px) {
+  html { font-size: 13px; }
+  .header { padding: 10px 12px; }
+  .main { padding: 10px; gap: 14px; }
+  th, td { padding: 9px 8px; font-size: 0.82rem; }
+  .section-header { padding: 12px; flex-wrap: wrap; gap: 6px; }
+  .section-title { font-size: 0.95rem; }
+  .section-sub { display: block; margin-top: 2px; }
+  .stats-bar { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-card { padding: 8px 10px; }
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  /* subtle scroll hint */
+  .table-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 24px;
+    pointer-events: none;
+    background: linear-gradient(to left, rgba(18,24,38,0.9), transparent);
+  }
+  .section { position: relative; }
+  .search-wrap { max-width: none; flex: 1 1 100%; }
+  .filter-group { width: 100%; justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+  html { font-size: 12.5px; }
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .controls { padding: 10px 12px; gap: 8px; }
+  .filter-btn { padding: 8px 12px; font-size: 0.78rem; }
+  th { font-size: 0.68rem; padding: 8px 6px; }
+  td { padding: 9px 6px; }
+  .signal { padding: 3px 7px; font-size: 0.7rem; }
+  .logo { font-size: 1.15rem; }
+  /* hide least critical columns on very narrow screens */
+  .hide-xs { display: none; }
+}
+/* Pulse animation for live */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Top 3 Cards */
+.top3-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+.top3-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.top3-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--strong));
+}
+.top3-card.rank-1::before { background: linear-gradient(90deg, #ffd600, #ff9100); }
+.top3-card.rank-2::before { background: linear-gradient(90deg, #c0c0c0, #90a4ae); }
+.top3-card.rank-3::before { background: linear-gradient(90deg, #cd7f32, #a1887f); }
+.top3-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.top3-rank {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--muted);
+  line-height: 1;
+}
+.top3-card.rank-1 .top3-rank { color: var(--gold); }
+.top3-card.rank-2 .top3-rank { color: #c0c0c0; }
+.top3-card.rank-3 .top3-rank { color: #cd7f32; }
+.top3-coin {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.top3-score-wrap {
+  text-align: right;
+}
+.top3-score {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: var(--mono);
+}
+.top3-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  font-size: 0.82rem;
+}
+.top3-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.top3-metric label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.top3-metric span {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.top3-breakdown {
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+}
+.top3-breakdown-title {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+.breakdown-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+.breakdown-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--blue), var(--purple));
+}
+.top3-analysis {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: rgba(41,121,255,0.08);
+  border-left: 3px solid var(--blue);
+  padding: 10px 12px;
+  border-radius: 0 8px 8px 0;
+}
+.top3-analysis strong { color: var(--gold); }
+@media (max-width: 480px) {
+  .top3-grid { padding: 12px; gap: 12px; }
+  .top3-card { padding: 14px; }
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-top">
+    <div class="logo">
+      <span>⚡</span> Binance <span>Pump Radar</span>
+      <span class="logo-badge">LIVE</span>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-label">Active USDT Pairs</span>
+      <span class="stat-value" id="statPairs">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Top Signal</span>
+      <span class="stat-value" id="statTopSignal">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Last Scan</span>
+      <span class="stat-value" id="statLastScan">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">WebSocket</span>
+      <span class="stat-value" id="statWs">CONNECTING</span>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Search coin (BTC, SOL…)" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="filter-group">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="strong">🔥 Strong ≥75</button>
+    <button class="filter-btn" data-filter="early">🟢 Early 55–74</button>
+  </div>
+</div>
+
+<main class="main">
+  <!-- TOP 3 HIGH-VOLUME PUMP CANDIDATES -->
+  <section class="section" id="sectionTop3">
+    <div class="section-header">
+      <div class="section-title">🚀 TOP 3 HIGH-VOLUME PUMP CANDIDATES <span class="section-sub">Highest score + strong volume · full indicator analysis</span></div>
+    </div>
+    <div id="top3Cards" class="top3-grid">
+      <div class="state-overlay"><div class="spinner"></div><div>Analyzing top candidates…</div></div>
+    </div>
+    <div class="disclaimer">These 3 coins combine elevated Pump Chance scores with high trading volume. Analysis is generated from live momentum, volume acceleration and activity data. Not financial advice.</div>
+  </section>
+
+  <!-- TOP 10 PUMP CHANCE -->
+  <section class="section" id="sectionPump">
+    <div class="section-header">
+      <div class="section-title">🔥 TOP 10 PUMP CHANCE <span class="section-sub">Market-momentum signal · not a prediction</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Coin</th>
+            <th>Score</th>
+            <th>Price</th>
+            <th>1m</th>
+            <th>5m</th>
+            <th>15m</th>
+            <th>24h</th>
+            <th>Vol Spike</th>
+            <th>Signal</th>
+          </tr>
+        </thead>
+        <tbody id="pumpBody">
+          <tr><td colspan="10"><div class="state-overlay"><div class="spinner"></div><div>Scanning Binance markets…</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="disclaimer">Pump Chance Score is a composite market-momentum signal derived from short-term price action and volume dynamics. It is <strong>not</strong> financial advice and does not guarantee future performance.</div>
+  </section>
+
+  <!-- CURRENT GAINERS -->
+  <section class="section" id="sectionGainers">
+    <div class="section-header">
+      <div class="section-title">📈 CURRENT BINANCE GAINERS <span class="section-sub">Sorted by 24h % change</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Coin</th>
+            <th>Price</th>
+            <th>1m</th>
+            <th>5m</th>
+            <th>15m</th>
+            <th>24h %</th>
+            <th>24h Volume</th>
+          </tr>
+        </thead>
+        <tbody id="gainersBody">
+          <tr><td colspan="8"><div class="state-overlay"><div class="spinner"></div><div>Loading gainers…</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  Binance Pump Radar · Public market data only · No API keys · Not financial advice<br>
+  Data from <a href="https://www.binance.com" target="_blank" rel="noopener">Binance</a> public endpoints
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ──────────────────────────────────────────────────────────────
+  const REST = 'https://data-api.binance.vision/api/v3';
+  const WS_BASE = 'wss://data-stream.binance.vision/ws';
+  const SCAN_INTERVAL_MS = 15000;       // ~15 s full recalculation
+  const KLINE_CANDIDATES = 28;          // top volume pairs to fetch klines for (mobile-friendly)
+  const KLINE_CONCURRENCY = 4;
+  const GAINERS_LIMIT = 20;
+  const WS_RECONNECT_MS = 3000;
+  const MAX_RECONNECT_ATTEMPTS = 20;
+
+  // ── State ───────────────────────────────────────────────────────────────
+  let allSymbols = [];                  // active USDT symbols
+  let tickerMap = new Map();            // symbol -> 24hr ticker data
+  let livePrices = new Map();           // symbol -> { price, prevPrice }
+  let klineCache = new Map();           // symbol -> { m1, m5, m15, volSpike, ts }
+  let pumpScores = [];                  // sorted [{symbol, score, ...}]
+  let gainersList = [];
+  let lastScanTime = null;
+  let ws = null;
+  let wsStatus = 'CONNECTING';
+  let reconnectAttempts = 0;
+  let scanTimer = null;
+  let isScanning = false;
+  let currentFilter = 'all';
+  let searchQuery = '';
+
+  // ── DOM refs ────────────────────────────────────────────────────────────
+  const el = {
+    pairs: document.getElementById('statPairs'),
+    topSignal: document.getElementById('statTopSignal'),
+    lastScan: document.getElementById('statLastScan'),
+    ws: document.getElementById('statWs'),
+    pumpBody: document.getElementById('pumpBody'),
+    gainersBody: document.getElementById('gainersBody'),
+    top3Cards: document.getElementById('top3Cards'),
+    search: document.getElementById('searchInput')
+  };
+
+  // ── Utilities ───────────────────────────────────────────────────────────
+  function fmtPrice(p) {
+    if (p == null || isNaN(p)) return '—';
+    const n = Number(p);
+    if (n >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (n >= 1) return n.toFixed(4);
+    if (n >= 0.01) return n.toFixed(6);
+    if (n >= 0.0001) return n.toFixed(8);
+    return n.toPrecision(4);
+  }
+
+  function fmtPct(v) {
+    if (v == null || isNaN(v)) return '—';
+    const n = Number(v);
+    const sign = n > 0 ? '+' : '';
+    return sign + n.toFixed(2) + '%';
+  }
+
+  function fmtVol(v) {
+    if (v == null || isNaN(v)) return '—';
+    const n = Number(v);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toFixed(0);
+  }
+
+  function pctClass(v) {
+    if (v == null || isNaN(v)) return '';
+    return Number(v) >= 0 ? 'pos' : 'neg';
+  }
+
+  function signalLabel(score) {
+    if (score >= 75) return { text: '🔥 Strong', cls: 'signal-strong', scoreCls: 'score-strong' };
+    if (score >= 55) return { text: '🟢 Early', cls: 'signal-early', scoreCls: 'score-early' };
+    return { text: '⚪ Neutral', cls: 'signal-neutral', scoreCls: 'score-neutral' };
+  }
+
+  function setWsStatus(status) {
+    wsStatus = status;
+    const node = el.ws;
+    node.textContent = status;
+    node.className = 'stat-value';
+    if (status === 'LIVE') node.classList.add('live');
+    else if (status === 'RECONNECTING') node.classList.add('reconnecting');
+    else if (status === 'ERROR') node.classList.add('error');
+  }
+
+  function updateLastScan() {
+    lastScanTime = new Date();
+    el.lastScan.textContent = lastScanTime.toLocaleTimeString();
+  }
+
+  // ── API helpers ─────────────────────────────────────────────────────────
+  async function fetchJSON(url, retries = 2) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        if (i === retries) throw err;
+        await sleep(800 * (i + 1));
+      }
+    }
+  }
+
+  function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  // ── Step 1: Load exchangeInfo → active USDT symbols ─────────────────────
+  async function loadSymbols() {
+    const info = await fetchJSON(`${REST}/exchangeInfo`);
+    const symbols = [];
+    for (const s of info.symbols) {
+      // per
