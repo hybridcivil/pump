@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0e17">
+<title>Binance Pump Radar</title>
+<style>
+:root {
+  --bg: #070b14;
+  --bg2: #0d1321;
+  --bg3: #141c2e;
+  --bg4: #1a2438;
+  --border: #1e2a40;
+  --border-light: #2a3a55;
+  --text: #f0f4fc;
+  --muted: #7a8ba3;
+  --green: #00e676;
+  --green-dim: rgba(0,230,118,0.12);
+  --red: #ff3d57;
+  --red-dim: rgba(255,61,87,0.12);
+  --orange: #ffab00;
+  --blue: #3d7eff;
+  --blue-dim: rgba(61,126,255,0.12);
+  --purple: #9c6bff;
+  --gold: #ffd54f;
+  --strong: #ff2d55;
+  --strong-glow: rgba(255,45,85,0.35);
+  --early: #00e676;
+  --early-glow: rgba(0,230,118,0.25);
+  --neutral: #6b7c93;
+  --radius: 12px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.45);
+  --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(61,126,255,0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(156,107,255,0.05), transparent);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--blue); text-decoration: none; }
+
+/* Header */
+.header {
+  background: rgba(13,19,33,0.85);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 18px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.logo span { 
+  background: linear-gradient(135deg, #ffd54f, #ff9100);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo-badge {
+  background: linear-gradient(135deg, #ff2d55, #ff6d00);
+  color: #fff;
+  font-size: 0.62rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  box-shadow: 0 0 12px rgba(255,45,85,0.4);
+  animation: badge-pulse 2.5s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,45,85,0.3); }
+  50% { box-shadow: 0 0 16px rgba(255,45,85,0.55); }
+}
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.stat-card {
+  background: linear-gradient(145deg, var(--bg3), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border-light); }
+.stat-label { 
+  font-size: 0.68rem; 
+  color: var(--muted); 
+  text-transform: uppercase; 
+  letter-spacing: 0.07em; 
+  font-weight: 500;
+}
+.stat-value { 
+  font-size: 1.05rem; 
+  font-weight: 700; 
+  font-family: var(--mono); 
+  letter-spacing: -0.02em;
+}
+.stat-value.live { 
+  color: var(--green); 
+  text-shadow: 0 0 12px rgba(0,230,118,0.3);
+}
+.stat-value.reconnecting { color: var(--orange); }
+.stat-value.error { color: var(--red); }
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 18px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px 10px 38px;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.search-wrap input:focus { 
+  border-color: var(--blue); 
+  box-shadow: 0 0 0 3px rgba(61,126,255,0.15);
+}
+.search-wrap::before {
+  content: '⌕';
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+.filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.filter-btn:hover { border-color: var(--border-light); color: var(--text); }
+.filter-btn.active {
+  background: linear-gradient(135deg, var(--blue), #5c6bff);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(61,126,255,0.3);
+}
+/* Main layout */
+.main {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.section {
+  background: linear-gradient(180deg, var(--bg2) 0%, rgba(13,19,33,0.95) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(61,126,255,0.06), transparent 60%);
+}
+.section-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.02em;
+}
+.section-sub {
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+.disclaimer {
+  font-size: 0.7rem;
+  color: var(--muted);
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.25);
+  line-height: 1.5;
+}
+/* Tables */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+th {
+  text-align: left;
+  padding: 11px 14px;
+  background: var(--bg3);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(30,42,64,0.6);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(61,126,255,0.05); }
+.rank {
+  font-weight: 800;
+  color: var(--muted);
+  width: 40px;
+  font-size: 0.9rem;
+}
+.rank-1 { color: var(--gold); text-shadow: 0 0 10px rgba(255,213,79,0.3); }
+.rank-2 { color: #b0bec5; }
+.rank-3 { color: #d4a574; }
+.coin {
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.03em;
+  font-size: 0.9rem;
+}
+.score {
+  font-weight: 800;
+  min-width: 56px;
+  font-size: 0.95rem;
+}
+.score-strong { 
+  color: var(--strong); 
+  text-shadow: 0 0 10px var(--strong-glow);
+}
+.score-early { 
+  color: var(--early); 
+  text-shadow: 0 0 8px var(--early-glow);
+}
+.score-neutral { color: var(--neutral); }
+.price { font-weight: 700; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.vol { color: var(--muted); font-size: 0.8rem; }
+.spike { font-weight: 700; }
+
+/* Strong Signal Indicators */
+.signal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: var(--font);
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.signal-strong { 
+  background: linear-gradient(135deg, rgba(255,45,85,0.2), rgba(255,45,85,0.08));
+  color: #ff4d6d;
+  border-color: rgba(255,45,85,0.35);
+  box-shadow: 0 0 16px var(--strong-glow), inset 0 1px 0 rgba(255,255,255,0.06);
+  animation: strong-pulse 2s ease-in-out infinite;
+}
+.signal-early { 
+  background: linear-gradient(135deg, rgba(0,230,118,0.18), rgba(0,230,118,0.06));
+  color: #00e676;
+  border-color: rgba(0,230,118,0.3);
+  box-shadow: 0 0 12px var(--early-glow);
+}
+.signal-neutral { 
+  background: rgba(107,124,147,0.12);
+  color: var(--neutral);
+  border-color: rgba(107,124,147,0.2);
+}
+@keyframes strong-pulse {
+  0%, 100% { box-shadow: 0 0 12px var(--strong-glow), inset 0 1px 0 rgba(255,255,255,0.05); }
+  50% { box-shadow: 0 0 22px rgba(255,45,85,0.5), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+/* Loading / Error states */
+.state-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  gap: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-box {
+  background: rgba(255,82,82,0.1);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 16px 20px;
+  color: var(--red);
+  max-width: 420px;
+  text-align: center;
+}
+.error-box button {
+  margin-top: 12px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px 16px 32px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.footer a { color: var(--muted); text-decoration: underline; }
+/* Responsive – mobile first improvements */
+@media (max-width: 768px) {
+  html { font-size: 13px; }
+  .header { padding: 10px 12px; }
+  .main { padding: 10px; gap: 14px; }
+  th, td { padding: 9px 8px; font-size: 0.82rem; }
+  .section-header { padding: 12px; flex-wrap: wrap; gap: 6px; }
+  .section-title { font-size: 0.95rem; }
+  .section-sub { display: block; margin-top: 2px; }
+  .stats-bar { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-card { padding: 8px 10px; }
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  /* subtle scroll hint */
+  .table-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 24px;
+    pointer-events: none;
+    background: linear-gradient(to left, rgba(18,24,38,0.9), transparent);
+  }
+  .section { position: relative; }
+  .search-wrap { max-width: none; flex: 1 1 100%; }
+  .filter-group { width: 100%; justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+  html { font-size: 12.5px; }
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .controls { padding: 10px 12px; gap: 8px; }
+  .filter-btn { padding: 8px 12px; font-size: 0.78rem; }
+  th { font-size: 0.68rem; padding: 8px 6px; }
+  td { padding: 9px 6px; }
+  .signal { padding: 3px 7px; font-size: 0.7rem; }
+  .logo { font-size: 1.15rem; }
+  /* hide least critical columns on very narrow screens */
+  .hide-xs { display: none; }
+}
+/* Pulse animation for live */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Top 3 Cards */
+.top3-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+  padding: 18px;
+}
+.top3-card {
+  background: linear-gradient(165deg, var(--bg4) 0%, var(--bg3) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.top3-card:hover {
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+}
+.top3-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.top3-card.rank-1::before { 
+  background: linear-gradient(90deg, #ffd54f, #ff9100, #ff2d55); 
+  box-shadow: 0 0 20px rgba(255,213,79,0.4);
+}
+.top3-card.rank-2::before { background: linear-gradient(90deg, #cfd8dc, #90a4ae); }
+.top3-card.rank-3::before { background: linear-gradient(90deg, #d4a574, #a1887f); }
+.top3-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.top3-rank {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: var(--muted);
+  line-height: 1;
+  font-family: var(--mono);
+}
+.top3-card.rank-1 .top3-rank { 
+  color: var(--gold); 
+  text-shadow: 0 0 14px rgba(255,213,79,0.4);
+}
+.top3-card.rank-2 .top3-rank { color: #cfd8dc; }
+.top3-card.rank-3 .top3-rank { color: #d4a574; }
+.top3-coin {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.top3-score-wrap {
+  text-align: right;
+}
+.top3-score {
+  font-size: 1.65rem;
+  font-weight: 900;
+  font-family: var(--mono);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.top3-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  font-size: 0.84rem;
+}
+.top3-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.top3-metric label {
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+.top3-metric span {
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.top3-breakdown {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.78rem;
+}
+.top3-breakdown-title {
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-weight: 500;
+}
+.breakdown-bar {
+  height: 5px;
+  background: rgba(30,42,64,0.8);
+  border-radius: 3px;
+  margin-top: 3px;
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+.breakdown-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue), var(--purple));
+  transition: width 0.6s ease;
+}
+.top3-analysis {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text);
+  background: linear-gradient(135deg, rgba(61,126,255,0.1), rgba(156,107,255,0.06));
+  border-left: 3px solid var(--blue);
+  padding: 12px 14px;
+  border-radius: 0 10px 10px 0;
+}
+.top3-analysis strong { 
+  color: var(--gold); 
+  font-weight: 700;
+}
+@media (max-width: 480px) {
+  .top3-grid { padding: 12px; gap: 12px; }
+  .top3-card { padding: 14px; }
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-top">
+    <div class="logo">
+      <span>⚡</span> Binance <span>Pump Radar</span>
+      <span class="logo-badge">LIVE</span>
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-card">
+      <span class="stat-label">Active USDT Pairs</span>
+      <span class="stat-value" id="statPairs">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Top Signal</span>
+      <span class="stat-value" id="statTopSignal">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Last Scan</span>
+      <span class="stat-value" id="statLastScan">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">WebSocket</span>
+      <span class="stat-value" id="statWs">CONNECTING</span>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Search coin (BTC, SOL…)" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="filter-group">
+    <button class="filter-btn active" data-filter="all">All Signals</button>
+    <button class="filter-btn" data-filter="strong">🔥 Strong ≥75</button>
+    <button class="filter-btn" data-filter="early">🟢 Early 55–74</button>
+  </div>
+</div>
+
+<main class="main">
+  <!-- TOP 3 HIGH-VOLUME PUMP CANDIDATES -->
+  <section class="section" id="sectionTop3">
+    <div class="section-header">
+      <div class="section-title">🚀 TOP 3 HIGH-VOLUME PUMP CANDIDATES <span class="section-sub">Highest score + strong volume · full indicator analysis</span></div>
+    </div>
+    <div id="top3Cards" class="top3-grid">
+      <div class="state-overlay"><div class="spinner"></div><div>Analyzing top candidates…</div></div>
+    </div>
+    <div class="disclaimer">These 3 coins combine elevated Pump Chance scores with high trading volume. Analysis is generated from live momentum, volume acceleration and activity data. Not financial advice.</div>
+  </section>
+
+  <!-- TOP 10 PUMP CHANCE -->
+  <section class="section" id="sectionPump">
+    <div class="section-header">
+      <div class="section-title">🔥 TOP 10 SHORT LIST <span class="section-sub">Sorted by 5m % → 15m % (high to low)</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Coin</th>
+            <th>Score</th>
+            <th>Price</th>
+            <th>1m</th>
+            <th>5m</th>
+            <th>15m</th>
+            <th>24h</th>
+            <th>Vol Spike</th>
+            <th>Signal</th>
+          </tr>
+        </thead>
+        <tbody id="pumpBody">
+          <tr><td colspan="10"><div class="state-overlay"><div class="spinner"></div><div>Scanning Binance markets…</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="disclaimer">Pump Chance Score is a composite market-momentum signal derived from short-term price action and volume dynamics. It is <strong>not</strong> financial advice and does not guarantee future performance.</div>
+  </section>
+
+  <!-- CURRENT GAINERS -->
+  <section class="section" id="sectionGainers">
+    <div class="section-header">
+      <div class="section-title">📈 CURRENT BINANCE GAINERS <span class="section-sub">Sorted by 24h % change</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Coin</th>
+            <th>Price</th>
+            <th>1m</th>
+            <th>5m</th>
+            <th>15m</th>
+            <th>24h %</th>
+            <th>24h Volume</th>
+          </tr>
+        </thead>
+        <tbody id="gainersBody">
+          <tr><td colspan="8"><div class="state-overlay"><div class="spinner"></div><div>Loading gainers…</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  Binance Pump Radar · Public market data only · No API keys · Not financial advice<br>
+  Data from <a href="https://www.binance.com" target="_blank" rel="noopener">Binance</a> public endpoints
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ──────────────────────────────────────────────────────────────
+  const REST = 'https://data-api.binance.vision/api/v3';
+  const WS_BASE = 'wss://data-stream.binance.vision/ws';
+  const SCAN_INTERVAL_MS = 15000;       // ~15 s full recalculation
+  const KLINE_CANDIDATES = 28;          // top volume pairs to fetch klines for (mobile-friendly)
+  const KLINE_CONCURRENCY = 4;
+  const GAINERS_LIMIT = 20;
+  const WS_RECONNECT_MS = 3000;
+  const MAX_RECONNECT_ATTEMPTS = 20;
+
+  // ── State ───────────────────────────────────────────────────────────────
+  let allSymbols = [];                  // active USDT symbols
+  let tickerMap = new Map();            // symbol -> 24hr ticker data
+  let livePrices = new Map();           // symbol -> { price, prevPrice }
+  let klineCache = new Map();           // symbol -> { m1, m5, m15, volSpike, ts }
+  let pumpScores = [];                  // sorted [{symbol, score, ...}]
+  let gainersList = [];
+  let lastScanTime = null;
+  let ws = null;
+  let wsStatus = 'CONNECTING';
+  let reconnectAttempts = 0;
+  let scanTimer = null;
+  let isScanning = false;
+  let currentFilter = 'all';
+  let searchQuery = '';
+
+  // ── DOM refs ────────────────────────────────────────────────────────────
+  const el = {
+    pairs: document.getElementById('statPairs'),
+    topSignal: document.getElementById('statTopSignal'),
+    lastScan: document.getElementById('statLastScan'),
+    ws: document.getElementById('statWs'),
+    pumpBody: document.getElementById('pumpBody'),
+    gainersBody: document.getElementById('gainersBody'),
+    top3Cards: document.getElementById('top3Cards'),
+    search: document.getElementById('searchInput')
+  };
+
+  // ── Utilities ───────────────────────────────────────────────────────────
+  function fmtPrice(p) {
+    if (p == null || isNaN(p)) return '—';
+    const n = Number(p);
+    if (n >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (n >= 1) return n.toFixed(4);
+    if (n >= 0.01) return n.toFixed(6);
+    if (n >= 0.0001) return n.toFixed(8);
+    return n.toPrecision(4);
+  }
+
+  function fmtPct(v) {
+    if (v == null || isNaN(v)) return '—';
+    const n = Number(v);
+    const sign = n > 0 ? '+' : '';
+    return sign + n.toFixed(2) + '%';
+  }
+
+  function fmtVol(v) {
+    if (v == null || isNaN(v)) return '—';
+    const n = Number(v);
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toFixed(0);
+  }
+
+  function pctClass(v) {
+    if (v == null || isNaN(v)) return '';
+    return Number(v) >= 0 ? 'pos' : 'neg';
+  }
+
+  function signalLabel(score) {
+    if (score >= 85) return { text: '🔥 STRONG', cls: 'signal-strong', scoreCls: 'score-strong' };
+    if (score >= 75) return { text: '🔥 Strong', cls: 'signal-strong', scoreCls: 'score-strong' };
+    if (score >= 55) return { text: '🟢 Early', cls: 'signal-early', scoreCls: 'score-early' };
+    return { text: '⚪ Neutral', cls: 'signal-neutral', scoreCls: 'score-neutral' };
+  }
+
+  function setWsStatus(status) {
+    wsStatus = status;
+    const node = el.ws;
+    node.textContent = status;
+    node.className = 'stat-value';
+    if (status === 'LIVE') node.classList.add('live');
+    else if (status === 'RECONNECTING') node.classList.add('reconnecting');
+    else if (status === 'ERROR') node.classList.add('error');
+  }
+
+  function updateLastScan() {
+    lastScanTime = new Date();
+    el.lastScan.textContent = lastScanTime.toLocaleTimeString();
+  }
+
+  // ── API helpers ─────────────────────────────────────────────────────────
+  async function fetchJSON(url, retries = 2) {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        if (i === retries) throw err;
+        await sleep(800 * (i + 1));
+      }
+    }
+  }
+
+  function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  // ── Step 1: Load exchangeInfo → active USDT symbols ─────────────────────
+  async function loadSymbols() {
+    const info = await fetchJSON(`${REST}/exchangeInfo`);
+    const symbols = [];
+    for (const s of info.symbols) {
+      // permissions array is often empty on market-data host; rely on status + isSpotTradingAllowed
+      if (
+        s.status === 'TRADING' &&
+        s.quoteAsset === 'USDT' &&
+        s.isSpotTradingAllowed !== false
+      ) {
+        // Exclude leveraged tokens
+        const base = s.baseAsset;
+        if (/UP$|DOWN$|BULL$|BEAR$/.test(base)) continue;
+        symbols.push(s.symbol);
+      }
+    }
+    allSymbols = symbols;
+    el.pairs.textContent = symbols.length.toLocaleString();
+    return symbols;
+  }
+
+  // ── Step 2: 24hr ticker (single request for all) ────────────────────────
+  async function load24hrTickers() {
+    const data = await fetchJSON(`${REST}/ticker/24hr`);
+    const symbolSet = new Set(allSymbols);
+    const map = new Map();
+    for (const t of data) {
+      if (!symbolSet.has(t.symbol)) continue;
+      const qv = parseFloat(t.quoteVolume);
+      if (qv <= 0) continue; // skip zero-volume
+      map.set(t.symbol, {
+        symbol: t.symbol,
+        lastPrice: parseFloat(t.lastPrice),
+        priceChangePercent: parseFloat(t.priceChangePercent),
+        volume: parseFloat(t.volume),
+        quoteVolume: qv,
+        highPrice: parseFloat(t.highPrice),
+        lowPrice: parseFloat(t.lowPrice),
+        count: parseInt(t.count, 10) || 0,
+        weightedAvgPrice: parseFloat(t.weightedAvgPrice)
+      });
+    }
+    tickerMap = map;
+    return map;
+  }
+
+  // ── Kline helpers ───────────────────────────────────────────────────────
+  function calcMomentum(klines) {
+    // klines: array of [openTime, open, high, low, close, volume, ...]
+    if (!klines || klines.length < 2) return null;
+    const closes = klines.map(k => parseFloat(k[4]));
+    const opens = klines.map(k => parseFloat(k[1]));
+    const vols = klines.map(k => parseFloat(k[5]));
+    const lastClose = closes[closes.length - 1];
+    const firstOpen = opens[0];
+    if (!firstOpen || firstOpen === 0) return null;
+    const pct = ((lastClose - firstOpen) / firstOpen) * 100;
+
+    // volume spike: last candle volume vs average of previous
+    let volSpike = 1;
+    if (vols.length >= 3) {
+      const recent = vols[vols.length - 1];
+      const prevAvg = vols.slice(0, -1).reduce((a, b) => a + b, 0) / (vols.length - 1);
+      if (prevAvg > 0) volSpike = recent / prevAvg;
+    }
+    return { pct, volSpike, lastClose };
+  }
+
+  async function fetchKlines(symbol, interval, limit) {
+    const url = `${REST}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+    const data = await fetchJSON(url, 1);
+    return data;
+  }
+
+  async function loadKlinesForCandidates(candidates) {
+    // Process with limited concurrency
+    const results = new Map();
+    let idx = 0;
+
+    async function worker() {
+      while (idx < candidates.length) {
+        const i = idx++;
+        const sym = candidates[i];
+        try {
+          // Fetch 1m (last 8), 5m (last 6), 15m (last 4) in parallel per symbol
+          const [k1, k5, k15] = await Promise.all([
+            fetchKlines(sym, '1m', 8),
+            fetchKlines(sym, '5m', 6),
+            fetchKlines(sym, '15m', 4)
+          ]);
+          const m1 = calcMomentum(k1);
+          const m5 = calcMomentum(k5);
+          const m15 = calcMomentum(k15);
+          if (m1 && m5 && m15) {
+            // Combined volume spike (favor shorter timeframe)
+            const volSpike = (m1.volSpike * 0.5 + m5.volSpike * 0.3 + m15.volSpike * 0.2);
+            results.set(sym, {
+              m1: m1.pct,
+              m5: m5.pct,
+              m15: m15.pct,
+              volSpike,
+              ts: Date.now()
+            });
+          }
+        } catch (e) {
+          // skip symbol on error
+        }
+        // small pause to be gentle
+        await sleep(40);
+      }
+    }
+
+    const workers = [];
+    for (let w = 0; w < KLINE_CONCURRENCY; w++) workers.push(worker());
+    await Promise.all(workers);
+    klineCache = results;
+    return results;
+  }
+
+  // ── Pump Chance Score (0-100) ───────────────────────────────────────────
+  /*
+    Weights:
+      5m momentum   25%
+      1m momentum   15%
+      15m momentum  15%
+      volume spike  25%
+      24h momentum  10%
+      activity      10%
+  */
+  function normalizeMomentum(pct, scale) {
+    // map roughly -scale..+scale → 0..100, clamp
+    // positive momentum scores higher
+    const n = 50 + (pct / scale) * 50;
+    return Math.max(0, Math.min(100, n));
+  }
+
+  function normalizeVolSpike(spike) {
+    // 1.0 = normal → ~40, 2x → ~70, 3x+ → 90+
+    if (spike <= 0.8) return 15;
+    if (spike <= 1.2) return 40;
+    if (spike <= 1.8) return 60;
+    if (spike <= 2.5) return 75;
+    if (spike <= 4) return 88;
+    return 96;
+  }
+
+  function normalize24h(pct) {
+    // mild contribution; already-risen coins get some credit but not dominance
+    const n = 40 + (pct / 15) * 30;
+    return Math.max(0, Math.min(100, n));
+  }
+
+  function normalizeActivity(t) {
+    // relative to quoteVolume and trade count
+    // we use a simple heuristic based on quoteVolume rank later; here per-coin
+    if (!t) return 40;
+    const qv = t.quoteVolume || 0;
+    const cnt = t.count || 0;
+    let score = 30;
+    if (qv > 5e6) score += 20;
+    if (qv > 20e6) score += 15;
+    if (qv > 50e6) score += 10;
+    if (cnt > 5000) score += 10;
+    if (cnt > 20000) score += 10;
+    // breakout: price near 24h high
+    if (t.highPrice && t.lastPrice) {
+      const dist = (t.highPrice - t.lastPrice) / t.highPrice;
+      if (dist < 0.01) score += 15;      // within 1% of high
+      else if (dist < 0.03) score += 8;
+    }
+    return Math.min(100, score);
+  }
+
+  function computePumpScore(symbol) {
+    const t = tickerMap.get(symbol);
+    const k = klineCache.get(symbol);
+    if (!t || !k) return null;
+
+    // Require some minimum activity
+    if (t.quoteVolume < 50000) return null;
+
+    const s5  = normalizeMomentum(k.m5, 3.5);   // ±3.5% ≈ full range for 5m
+    const s1  = normalizeMomentum(k.m1, 1.8);
+    const s15 = normalizeMomentum(k.m15, 6);
+    const sVol = normalizeVolSpike(k.volSpike);
+    const s24 = normalize24h(t.priceChangePercent);
+    const sAct = normalizeActivity(t);
+
+    const score =
+      s5  * 0.25 +
+      s1  * 0.15 +
+      s15 * 0.15 +
+      sVol * 0.25 +
+      s24 * 0.10 +
+      sAct * 0.10;
+
+    return {
+      symbol,
+      score: Math.round(score * 10) / 10,
+      price: livePrices.has(symbol) ? livePrices.get(symbol).price : t.lastPrice,
+      m1: k.m1,
+      m5: k.m5,
+      m15: k.m15,
+      chg24: t.priceChangePercent,
+      volSpike: k.volSpike,
+      quoteVolume: t.quoteVolume,
+      components: {
+        m5: Math.round(s5),
+        m1: Math.round(s1),
+        m15: Math.round(s15),
+        vol: Math.round(sVol),
+        h24: Math.round(s24),
+        act: Math.round(sAct)
+      }
+    };
+  }
+
+  // ── Full scan cycle ─────────────────────────────────────────────────────
+  async function runScan() {
+    if (isScanning) return;
+    isScanning = true;
+    try {
+      await load24hrTickers();
+
+      // Gainers first (fast path – no klines needed)
+      gainersList = Array.from(tickerMap.values())
+        .filter(t => t.priceChangePercent != null && t.quoteVolume > 30000)
+        .sort((a, b) => b.priceChangePercent - a.priceChangePercent)
+        .slice(0, GAINERS_LIMIT)
+        .map(t => ({
+          symbol: t.symbol,
+          price: livePrices.has(t.symbol) ? livePrices.get(t.symbol).price : t.lastPrice,
+          m1: klineCache.has(t.symbol) ? klineCache.get(t.symbol).m1 : null,
+          m5: klineCache.has(t.symbol) ? klineCache.get(t.symbol).m5 : null,
+          m15: klineCache.has(t.symbol) ? klineCache.get(t.symbol).m15 : null,
+          chg24: t.priceChangePercent,
+          quoteVolume: t.quoteVolume
+        }));
+      renderGainersTable();   // show something immediately
+
+      // Select top volume candidates for kline enrichment
+      const candidates = Array.from(tickerMap.values())
+        .filter(t => t.quoteVolume > 80000)
+        .sort((a, b) => b.quoteVolume - a.quoteVolume)
+        .slice(0, KLINE_CANDIDATES)
+        .map(t => t.symbol);
+
+      await loadKlinesForCandidates(candidates);
+
+      // Compute Pump Chance scores
+      const scores = [];
+      for (const sym of candidates) {
+        const s = computePumpScore(sym);
+        if (s) scores.push(s);
+      }
+      scores.sort((a, b) => b.score - a.score);
+      pumpScores = scores;
+
+      // Refresh gainers with short-term % if available
+      gainersList = gainersList.map(g => {
+        if (klineCache.has(g.symbol)) {
+          const k = klineCache.get(g.symbol);
+          return { ...g, m1: k.m1, m5: k.m5, m15: k.m15 };
+        }
+        return g;
+      });
+
+      updateLastScan();
+      renderAll();
+    } catch (err) {
+      console.error('Scan error:', err);
+      showError(err.message || 'Failed to fetch market data');
+    } finally {
+      isScanning = false;
+    }
+  }
+
+  // ── Rendering ───────────────────────────────────────────────────────────
+  function matchesFilter(item) {
+    if (searchQuery) {
+      const q = searchQuery.toUpperCase();
+      const base = item.symbol.replace('USDT', '');
+      if (!base.includes(q) && !item.symbol.includes(q)) return false;
+    }
+    if (currentFilter === 'strong') return item.score >= 75;
+    if (currentFilter === 'early') return item.score >= 55 && item.score < 75;
+    return true;
+  }
+
+  function renderPumpTable() {
+    // Short Top 10 list sorted by 5m % → 15m % (high to low)
+    let list = pumpScores.filter(matchesFilter);
+    list.sort((a, b) => {
+      const m5a = a.m5 ?? -999, m5b = b.m5 ?? -999;
+      if (m5b !== m5a) return m5b - m5a;
+      const m15a = a.m15 ?? -999, m15b = b.m15 ?? -999;
+      if (m15b !== m15a) return m15b - m15a;
+      return (b.score ?? 0) - (a.score ?? 0);
+    });
+    const filtered = list.slice(0, 10);
+
+    if (filtered.length === 0) {
+      el.pumpBody.innerHTML = `<tr><td colspan="10"><div class="state-overlay">No coins match current filters</div></td></tr>`;
+      el.topSignal.textContent = '—';
+      return;
+    }
+
+    // Top signal still based on highest Pump Score
+    if (pumpScores.length) {
+      const top = pumpScores[0];
+      el.topSignal.innerHTML = `${top.symbol.replace('USDT','')} <span style="color:var(--muted);font-weight:400">(${top.score})</span>`;
+    }
+
+    let html = '';
+    filtered.forEach((item, i) => {
+      const rank = i + 1;
+      const rankCls = rank <= 3 ? `rank-${rank}` : '';
+      const sig = signalLabel(item.score);
+      const price = livePrices.has(item.symbol) ? livePrices.get(item.symbol).price : item.price;
+      const prev = livePrices.has(item.symbol) ? livePrices.get(item.symbol).prevPrice : null;
+      let priceCls = '';
+      if (prev != null && price != null) {
+        if (price > prev) priceCls = 'pos';
+        else if (price < prev) priceCls = 'neg';
+      }
+
+      html += `<tr>
+        <td class="rank ${rankCls}">${rank}</td>
+        <td class="coin">${item.symbol.replace('USDT','')}</td>
+        <td class="score ${sig.scoreCls}">${item.score.toFixed(1)}</td>
+        <td class="price ${priceCls}">${fmtPrice(price)}</td>
+        <td class="${pctClass(item.m1)}">${fmtPct(item.m1)}</td>
+        <td class="${pctClass(item.m5)}"><strong>${fmtPct(item.m5)}</strong></td>
+        <td class="${pctClass(item.m15)}"><strong>${fmtPct(item.m15)}</strong></td>
+        <td class="${pctClass(item.chg24)}">${fmtPct(item.chg24)}</td>
+        <td class="spike ${item.volSpike >= 2 ? 'pos' : ''}">${item.volSpike.toFixed(2)}x</td>
+        <td><span class="signal ${sig.cls}">${sig.text}</span></td>
+      </tr>`;
+    });
+    el.pumpBody.innerHTML = html;
+  }
+
+  function renderGainersTable() {
+    // Apply search only (no signal filter on gainers)
+    let list = gainersList;
+    if (searchQuery) {
+      const q = searchQuery.toUpperCase();
+      list = list.filter(item => {
+        const base = item.symbol.replace('USDT', '');
+        return base.includes(q) || item.symbol.includes(q);
+      });
+    }
+    list = list.slice(0, GAINERS_LIMIT);
+
+    if (list.length === 0) {
+      el.gainersBody.innerHTML = `<tr><td colspan="8"><div class="state-overlay">No gainers match search</div></td></tr>`;
+      return;
+    }
+
+    let html = '';
+    list.forEach((item, i) => {
+      const rank = i + 1;
+      const rankCls = rank <= 3 ? `rank-${rank}` : '';
+      const price = livePrices.has(item.symbol) ? livePrices.get(item.symbol).price : item.price;
+      const prev = livePrices.has(item.symbol) ? livePrices.get(item.symbol).prevPrice : null;
+      let priceCls = '';
+      if (prev != null && price != null) {
+        if (price > prev) priceCls = 'pos';
+        else if (price < prev) priceCls = 'neg';
+      }
+
+      html += `<tr>
+        <td class="rank ${rankCls}">${rank}</td>
+        <td class="coin">${item.symbol.replace('USDT','')}</td>
+        <td class="price ${priceCls}">${fmtPrice(price)}</td>
+        <td class="${pctClass(item.m1)}">${fmtPct(item.m1)}</td>
+        <td class="${pctClass(item.m5)}">${fmtPct(item.m5)}</td>
+        <td class="${pctClass(item.m15)}">${fmtPct(item.m15)}</td>
+        <td class="${pctClass(item.chg24)}">${fmtPct(item.chg24)}</td>
+        <td class="vol">${fmtVol(item.quoteVolume)}</td>
+      </tr>`;
+    });
+    el.gainersBody.innerHTML = html;
+  }
+
+  function generateAnalysis(item) {
+    const parts = [];
+    const c = item.components || {};
+    const m5 = item.m5 || 0;
+    const m1 = item.m1 || 0;
+    const m15 = item.m15 || 0;
+    const spike = item.volSpike || 1;
+    const chg24 = item.chg24 || 0;
+
+    // Momentum narrative
+    if (m5 >= 1.5 && m1 >= 0.4) {
+      parts.push(`Strong short-term momentum (5m ${fmtPct(m5)}, 1m ${fmtPct(m1)})`);
+    } else if (m5 >= 0.8) {
+      parts.push(`Building 5m momentum (${fmtPct(m5)})`);
+    } else if (m15 >= 2) {
+      parts.push(`Solid 15m uptrend (${fmtPct(m15)})`);
+    } else {
+      parts.push(`Early price expansion underway`);
+    }
+
+    // Volume
+    if (spike >= 2.5) {
+      parts.push(`exceptional volume surge (${spike.toFixed(1)}x average)`);
+    } else if (spike >= 1.6) {
+      parts.push(`clear volume acceleration (${spike.toFixed(1)}x)`);
+    } else if (spike >= 1.2) {
+      parts.push(`rising volume support (${spike.toFixed(1)}x)`);
+    }
+
+    // 24h context
+    if (chg24 < 5 && (m5 > 0.5 || spike > 1.5)) {
+      parts.push(`still early in the move (24h only ${fmtPct(chg24)})`);
+    } else if (chg24 >= 8 && m5 > 1) {
+      parts.push(`continuation strength after ${fmtPct(chg24)} 24h gain`);
+    }
+
+    // Activity / breakout
+    if (c.act >= 70) {
+      parts.push(`high trading activity confirms interest`);
+    }
+
+    let text = parts.join(' + ') + '.';
+    // Capitalize first letter
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+
+    if (item.score >= 80) {
+      text = `<strong>High-conviction setup.</strong> ` + text;
+    } else if (item.score >= 70) {
+      text = `<strong>Strong candidate.</strong> ` + text;
+    } else {
+      text = `<strong>Watch closely.</strong> ` + text;
+    }
+    return text;
+  }
+
+  function renderTop3() {
+    // Select top 3 from pumpScores (already sorted by score, candidates are high-volume)
+    // Extra safety: prefer those with both solid score and meaningful volume
+    const top3 = pumpScores
+      .filter(s => s.quoteVolume > 200000 && s.score >= 50)
+      .slice(0, 3);
+
+    if (top3.length === 0) {
+      el.top3Cards.innerHTML = `<div class="state-overlay">Waiting for high-volume candidates…</div>`;
+      return;
+    }
+
+    let html = '';
+    top3.forEach((item, i) => {
+      const rank = i + 1;
+      const sig = signalLabel(item.score);
+      const price = livePrices.has(item.symbol) ? livePrices.get(item.symbol).price : item.price;
+      const c = item.components || { m5: 0, m1: 0, m15: 0, vol: 0, h24: 0, act: 0 };
+      const analysis = generateAnalysis(item);
+      const base = item.symbol.replace('USDT', '');
+
+      html += `
+      <div class="top3-card rank-${rank}">
+        <div class="top3-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="top3-rank">#${rank}</span>
+            <span class="top3-coin">${base}</span>
+          </div>
+          <div class="top3-score-wrap">
+            <div class="top3-score ${sig.scoreCls}">${item.score.toFixed(1)}</div>
+            <span class="signal ${sig.cls}">${sig.text}</span>
+          </div>
+        </div>
+
+        <div class="top3-metrics">
+          <div class="top3-metric"><label>Price</label><span class="price">${fmtPrice(price)}</span></div>
+          <div class="top3-metric"><label>24h Vol</label><span>${fmtVol(item.quoteVolume)}</span></div>
+          <div class="top3-metric"><label>1m</label><span class="${pctClass(item.m1)}">${fmtPct(item.m1)}</span></div>
+          <div class="top3-metric"><label>5m</label><span class="${pctClass(item.m5)}">${fmtPct(item.m5)}</span></div>
+          <div class="top3-metric"><label>15m</label><span class="${pctClass(item.m15)}">${fmtPct(item.m15)}</span></div>
+          <div class="top3-metric"><label>24h</label><span class="${pctClass(item.chg24)}">${fmtPct(item.chg24)}</span></div>
+          <div class="top3-metric"><label>Vol Spike</label><span class="${item.volSpike >= 1.8 ? 'pos' : ''}">${item.volSpike.toFixed(2)}x</span></div>
+          <div class="top3-metric"><label>Activity</label><span>${c.act}/100</span></div>
+        </div>
+
+        <div class="top3-breakdown">
+          <div class="top3-breakdown-title">Score Breakdown</div>
+          <div class="breakdown-row"><span>5m Momentum (25%)</span><span>${c.m5}</span></div>
+          <div class="breakdown-bar"><i style="width:${c.m5}%"></i></div>
+          <div class="breakdown-row"><span>Volume Spike (25%)</span><span>${c.vol}</span></div>
+          <div class="breakdown-bar"><i style="width:${c.vol}%"></i></div>
+          <div class="breakdown-row"><span>1m Momentum (15%)</span><span>${c.m1}</span></div>
+          <div class="breakdown-bar"><i style="width:${c.m1}%"></i></div>
+          <div class="breakdown-row"><span>15m Momentum (15%)</span><span>${c.m15}</span></div>
+          <div class="breakdown-bar"><i style="width:${c.m15}%"></i></div>
+          <div class="breakdown-row"><span>24h + Activity (20%)</span><span>${Math.round((c.h24 + c.act) / 2)}</span></div>
+          <div class="breakdown-bar"><i style="width:${Math.round((c.h24 + c.act) / 2)}%"></i></div>
+        </div>
+
+        <div class="top3-analysis">${analysis}</div>
+      </div>`;
+    });
+    el.top3Cards.innerHTML = html;
+  }
+
+  function renderAll() {
+    renderTop3();
+    renderPumpTable();
+    renderGainersTable();
+  }
+
+  function showError(msg) {
+    const html = `<tr><td colspan="10"><div class="state-overlay">
+      <div class="error-box">
+        <strong>Connection Error</strong><br>${msg}<br>
+        <button onclick="location.reload()">Retry</button>
+      </div>
+    </div></td></tr>`;
+    el.pumpBody.innerHTML = html;
+    el.gainersBody.innerHTML = html.replace('colspan="10"', 'colspan="8"');
+    if (el.top3Cards) {
+      el.top3Cards.innerHTML = `<div class="state-overlay"><div class="error-box"><strong>Connection Error</strong><br>${msg}</div></div>`;
+    }
+    setWsStatus('ERROR');
+  }
+
+  // ── WebSocket live prices ───────────────────────────────────────────────
+  function connectWebSocket() {
+    if (ws) {
+      try { ws.close(); } catch (_) {}
+    }
+    setWsStatus('CONNECTING');
+    const url = `${WS_BASE}/!miniTicker@arr`;
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      setWsStatus('LIVE');
+      reconnectAttempts = 0;
+    };
+
+    ws.onmessage = (evt) => {
+      try {
+        const arr = JSON.parse(evt.data);
+        if (!Array.isArray(arr)) return;
+        for (const t of arr) {
+          const sym = t.s;
+          if (!tickerMap.has(sym) && !allSymbols.includes(sym)) continue;
+          const price = parseFloat(t.c);
+          const prev = livePrices.has(sym) ? livePrices.get(sym).price : price;
+          livePrices.set(sym, { price, prevPrice: prev });
+        }
+        // lightweight re-render of visible prices only (throttled by browser)
+        if (pumpScores.length) renderAll();
+      } catch (_) {}
+    };
+
+    ws.onclose = () => {
+      setWsStatus('RECONNECTING');
+      scheduleReconnect();
+    };
+
+    ws.onerror = () => {
+      setWsStatus('ERROR');
+      try { ws.close(); } catch (_) {}
+    };
+  }
+
+  function scheduleReconnect() {
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      setWsStatus('ERROR');
+      return;
+    }
+    reconnectAttempts++;
+    const delay = Math.min(WS_RECONNECT_MS * Math.pow(1.4, reconnectAttempts - 1), 30000);
+    setTimeout(connectWebSocket, delay);
+  }
+
+  // ── Event listeners ─────────────────────────────────────────────────────
+  el.search.addEventListener('input', () => {
+    searchQuery = el.search.value.trim();
+    renderAll();
+  });
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderAll();
+    });
+  });
+
+  // ── Bootstrap ───────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      await loadSymbols();
+      await runScan();
+      connectWebSocket();
+      // Periodic full scan
+      scanTimer = setInterval(runScan, SCAN_INTERVAL_MS);
+    } catch (err) {
+      console.error(err);
+      showError(err.message || 'Unable to reach Binance API. Check your connection and retry.');
+      // still try to recover
+      setTimeout(init, 8000);
+    }
+  }
+
+  // Visibility: pause heavy work when tab hidden (optional nicety)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+    } else {
+      if (!scanTimer) {
+        runScan();
+        scanTimer = setInterval(runScan, SCAN_INTERVAL_MS);
+      }
+    }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
